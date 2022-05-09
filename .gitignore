@@ -1,0 +1,3 @@
+/terraform-creating-storage/.terraform/
+/terraform-with-modules/.terraform/
+/terraform-with-modules/.secrets
