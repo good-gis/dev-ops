@@ -1,0 +1,29 @@
+---
+- hosts: test
+  become: true
+  
+  tasks:
+    - name: Install aptitude
+      apt:
+        name: aptitude
+        state: present
+        update_cache: true
+
+    - name: Install required system packages
+      apt:
+        pkg:
+          - vsftpd
+        state: present
+        update_cache: true
+    
+    - name: Remove file vsfdpd.conf
+      file:
+        path: /etc/vsfdpd.conf
+        state: absent
+
+    - name: Copy config file with owner and permissions
+      copy:
+        src: ./vsfdpd.conf
+        dest: /etc/vsfdpd.conf
+        owner: ivan
+        mode: '0777'

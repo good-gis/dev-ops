@@ -17,3 +17,21 @@
       tags:
       - drop
       - postfix
+
+
+
+
+
+
+
+
+
+
+
+
+          - name: Copy config file with permissions
+      copy:
+        src: ./vsftpd.conf
+        dest: /etc/vsftpd.conf
+        owner: ivan
+        mode: '0777'

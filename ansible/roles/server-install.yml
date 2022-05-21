@@ -1,0 +1,6 @@
+- name: Run install
+  hosts: test
+  become: true
+  gather_facts: false
+  roles:
+        - vsftpd 
