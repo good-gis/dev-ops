@@ -9,12 +9,12 @@ terraform {
   }
 
   backend "s3" {
-    endpoint   = ""
-    bucket     = ""
-    region     = ""
-    key        = ""
-    access_key = ""
-    secret_key = ""
+    endpoint   = "storage.yandexcloud.net"
+    bucket     = "tf-state-bucket-gis"
+    region     = "ru-central1-a"
+    key        = "main.tfstate"
+    access_key = "YCAJEUFaW4pFMY1QzMcRGcGUX"
+    secret_key = "YCNf0QaBokCwBfHArx8Ijqei9EWEyXGr2ZPil-qk"
 
     skip_region_validation      = true
     skip_credentials_validation = true

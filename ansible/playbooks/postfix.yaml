@@ -1,0 +1,19 @@
+---
+- hosts: test
+  become: true
+  tasks:
+    - name: Install postfix
+      apt:
+        name: postfix
+        state: present
+      tags:
+      - init
+      - postfix
+
+    - name: Remove "postfix" package
+      apt:
+        name: postfix
+        state: absent
+      tags:
+      - drop
+      - postfix

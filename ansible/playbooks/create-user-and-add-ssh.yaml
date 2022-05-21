@@ -1,0 +1,17 @@
+---
+- hosts: test
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Add the user 'sonya' with a bash shell, appending the group 'users'
+      ansible.builtin.user:
+        name: sonya
+        shell: /bin/bash
+        group: users
+        append: yes
+
+    - name: Copy SSH public key for user sonya in ~andrey/.ssh/id_rsa
+      copy: src=/home/ivan/.ssh/ansible/id_rsa.pub dest=/home/andrey/.ssh/id_rsa.pub
+
+    - name: Copy SSH private key for user sonya in ~andrey/.ssh/id_rsa
+      copy: src=/home/ivan/.ssh/ansible/id_rsa_encrypt dest=/home/andrey/.ssh/id_rsa
