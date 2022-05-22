@@ -1,0 +1,33 @@
+---
+- hosts: test
+  become: true
+
+  vars:
+    groupName: superusers
+
+  tasks:
+    - name: Ensure group "superusers" exists
+      group:
+        name: "{{ groupName }}"
+        state: present
+
+    - name: Add several users, 'user2' и 'user3' with a bash shell, appending the group 'superusers' to the user's groups
+      user:
+        name: "{{ item.userName }}"
+        state: present
+        shell: /bin/bash
+        groups: "{{ groupName }}"
+        append: yes
+      loop:
+        - { userName: 'user2' }
+        - { userName: 'user3' }
+
+    - name: Allow the users of "{{ groupName }}" to be sudo 
+      community.general.sudoers:
+        name: "{{ groupName }}"
+        state: present
+        group: "{{ groupName }}"
+        commands: ALL
+
+    - name: Make sure group superusers is in the sudoers configuration
+      shell: grep {{ groupName }} /etc/sudoers.d/{{ groupName }}
