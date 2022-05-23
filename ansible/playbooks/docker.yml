@@ -1,5 +1,5 @@
 ---
-- hosts: test
+- hosts: app
   become: true
   vars:
     container_count: 1
@@ -8,54 +8,125 @@
     default_container_command: sleep 1d
 
   tasks:
-    - name: Install aptitude
-      apt:
-        name: aptitude
-        state: latest
-        update_cache: true
+    - name: Install, configure, and start Docker for Ubuntu
+      block:
+        - name: Install aptitude
+          apt:
+            name: aptitude
+            state: latest
+            update_cache: true
 
-    - name: Install required system packages
-      apt:
-        pkg:
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - software-properties-common
-          - python3-pip
-          - virtualenv
-          - python3-setuptools
-        state: latest
-        update_cache: true
+        - name: Install required system packages
+          apt:
+            pkg:
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - software-properties-common
+              - python3-pip
+              - virtualenv
+              - python3-setuptools
+            state: latest
+            update_cache: true
 
-    - name: Add Docker GPG apt Key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+        - name: Add Docker GPG apt Key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
 
-    - name: Add Docker Repository
-      apt_repository:
-        repo: deb https://download.docker.com/linux/ubuntu focal stable
-        state: present
+        - name: Add Docker Repository
+          apt_repository:
+            repo: deb https://download.docker.com/linux/ubuntu focal stable
+            state: present
 
-    - name: Update apt and install docker-ce
-      apt:
-        name: docker-ce
-        state: latest
-        update_cache: true
+        - name: Update apt and install docker-ce
+          apt:
+            name: docker-ce
+            state: latest
+            update_cache: true
+      when: ansible_facts['distribution'] == 'Ubuntu'
+    - name: Install, configure, and start Docker for CentOS
+      block:
+        - name: Install yum utils
+          yum:
+            name: yum-utils
+            state: latest
 
+        - name: Install device-mapper-persistent-data
+          yum:
+            name: device-mapper-persistent-data
+            state: latest
+
+        - name: Install lvm2
+          yum:
+            name: lvm2
+            state: latest
+
+        - name: Add Docker repo
+          get_url:
+            url: https://download.docker.com/linux/centos/docker-ce.repo
+            dest: /etc/yum.repos.d/docker-ce.repo
+          become: yes
+
+        - name: Install Docker
+          package:
+            name: docker-ce
+            state: latest
+          become: yes
+
+        - name: Start Docker service
+          service:
+            name: docker
+            state: started
+            enabled: yes
+          become: yes
+      when: ansible_facts['distribution'] == 'CentOS'
     - name: Install Docker Module for Python
       pip:
         name: docker
+    - name: Pull default Docker image
+      community.docker.docker_image:
+        name: "{{ default_container_image }}"
+        source: pull
+    - name: Create default containers
+      community.docker.docker_container:
+        name: "{{ default_container_name }}{{ item }}"
+        image: "{{ default_container_image }}"
+        command: "{{ default_container_command }}"
+        state: present
+      with_sequence: count={{ container_count }}
 
-#    - name: Pull default Docker image
-#      community.docker.docker_image:
-#        name: "{{ default_container_image }}"
-#        source: pull
-#
-#    - name: Create default containers
-#      community.docker.docker_container:
-#        name: "{{ default_container_name }}{{ item }}"
-#        image: "{{ default_container_image }}"
-#        command: "{{ default_container_command }}"
-#        state: present
-#      with_sequence: count={{ container_count }}
+
+- hosts: database
+  become: true
+
+  pre_tasks:
+    - name: Install postgresql
+      apt:
+        name: postgresql-{{ postgresql_version }}
+        state: latest
+        update_cache: true
+
+    - name: "Install Python packages"
+      pip: "name={{ item }}  state=present"
+      with_items:
+        - psycopg2-binary
+
+  tasks:
+    - name: "Find out if PostgreSQL is initialized"
+      ansible.builtin.stat:
+        path: "/var/lib/pgsql/data/pg_hba.conf"
+      register: postgres_data
+
+    - name: "Initialize PostgreSQL"
+      shell: "postgresql-setup initdb -D {{ postgresql_db_dir }}"
+      when: not postgres_data.stat.exists
+
+    - name: "Start and enable services"
+      service: "name={{ item }} state=started enabled=yes"
+      with_items:
+        - postgresql
+
+  handlers:
+    - name: restart postgres
+      service: name=postgresql state=restarted
